@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#14202a;--bg2:#1c2b37;--ink:#eef2f4;--mute:#9fb0bb;--line:#31434f;--gold:#e8c872;--gold-ink:#241a00;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#223545,var(--bg));background-attachment:fixed;color:var(--ink);font:400 16px/1.5 Figtree,system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+header{display:flex;align-items:center;gap:12px;padding:14px clamp(16px,4vw,40px)}
+h1{font:600 clamp(24px,3.4vw,36px)/1.1 Fraunces,Georgia,serif;margin:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-weight:500}
+.btn:hover{border-color:var(--gold)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.hidden{display:none!important}
+main{padding:8px clamp(16px,4vw,40px) 40px}
+.shelf{display:grid;gap:36px 28px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));max-width:1400px;margin:0 auto;padding-bottom:12px}
+.mag{background:none;border:0;padding:0;text-align:left;position:relative}
+.cov{aspect-ratio:3/4;background:var(--bg2);border-radius:3px 8px 8px 3px;overflow:hidden;box-shadow:-3px 0 0 rgba(0,0,0,.35) inset,0 14px 28px rgba(0,0,0,.45);transition:transform .2s;display:grid;place-items:center}
+.cov::after{content:"";position:absolute;left:0;top:0;width:9px;height:calc(100% - 52px);background:linear-gradient(90deg,rgba(0,0,0,.4),transparent)}
+.mag:hover .cov{transform:translateY(-6px) rotate(-1deg)}
+.cov img,.cov canvas{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.mag b{display:block;margin-top:12px;font-weight:700;overflow-wrap:anywhere}
+.mag small{color:var(--mute)}
+.tag{position:absolute;top:10px;right:-6px;background:var(--gold);color:var(--gold-ink);font-weight:700;font-size:13px;padding:2px 10px;border-radius:4px 0 0 4px}
+.panel{max-width:520px;margin:30px auto;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:22px}
+.panel h2{font:600 20px Fraunces,Georgia,serif;margin:0 0 6px}
+.panel p{color:var(--mute);margin:0 0 12px;font-size:14px}
+.panel label{display:block;font-weight:700;font-size:13px;margin:10px 0 4px}
+.panel input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg)}
+.note{text-align:center;color:var(--mute);margin:30px 0}
+.note.err{color:#ff9d9d}
+#reader{display:flex;flex-direction:column;height:calc(100dvh - 68px)}
+#stage{flex:1;min-height:0;display:grid;place-items:center;padding:0 clamp(8px,3vw,40px)}
+#book{width:100%;height:100%}
+#load{text-align:center;color:var(--mute)}
+.bar{display:flex;align-items:center;gap:12px;padding:12px clamp(12px,4vw,40px) 18px;justify-content:center}
+.bar input[type=range]{flex:1;max-width:520px;accent-color:var(--gold)}
+#pn{min-width:84px;text-align:center;color:var(--mute);font-variant-numeric:tabular-nums}
+.prog{width:220px;height:6px;border-radius:3px;background:var(--line);margin:12px auto 0;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--gold)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="title">Catálogos</h1>
+  <button class="btn hidden" id="share">Compartir</button>
+  <button class="btn hidden" id="fs">Pantalla completa</button>
+  <button class="btn hidden" id="back">Ver todos</button>
+  <button class="btn" id="cfg">Configurar</button>
+</header>
+
+<main id="kiosk">
+  <section class="panel hidden" id="setup">
+    <h2>Conecta tu carpeta de Drive</h2>
+    <p>La carpeta debe estar compartida como «Cualquier persona con el enlace». Cada PDF que subas aparecerá aquí como una revista.</p>
+    <label for="folder">Enlace o ID de la carpeta</label>
+    <input id="folder" type="text" placeholder="https://drive.google.com/drive/folders/…" autocomplete="off">
+    <label for="key">Clave de API de Google (Drive API activada)</label>
+    <input id="key" type="password" placeholder="AIza…" autocomplete="off">
+    <p style="margin-top:14px"><button class="btn gold" id="save">Guardar y cargar</button></p>
+    <p>Para dejarlo fijo en el archivo, escribe estos dos datos en la sección CONFIG del código.</p>
+  </section>
+  <div class="shelf" id="shelf"></div>
+  <div class="note" id="note"></div>
+</main>
+
+<section id="reader" class="hidden">
+  <div id="stage">
+    <div id="load"><div>Preparando la revista…</div><div class="prog"><i id="bar"></i></div></div>
+    <div id="book" class="hidden"></div>
+  </div>
+  <div class="bar hidden" id="nav">
+    <button class="btn" id="prev" aria-label="Página anterior">Anterior</button>
+    <input type="range" id="rng" min="1" max="1" value="1" aria-label="Ir a la página">
+    <span id="pn"></span>
+    <button class="btn" id="next" aria-label="Página siguiente">Siguiente</button>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<script>
+/* ===== CONFIG: opcional, déjalo vacío para configurarlo desde la página ===== */
+const CONFIG={TITLE:'Catálogos',FOLDER:'',API_KEY:'',NEW_DAYS:14};
+/* ============================================================================= */
+const $=s=>document.querySelector(s);
+const store={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const WORKER='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const workerReady=(async()=>{try{const t=await(await fetch(WORKER)).text();pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:'text/javascript'}))}catch(e){pdfjsLib.GlobalWorkerOptions.workerSrc=WORKER}})();
+document.title=CONFIG.TITLE;$('#title').textContent=CONFIG.TITLE;
+
+let files=[],flip=null,urls=[],cur=null,token=0;
+const folderId=s=>{s=(s||'').trim();const m=s.match(/folders\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m?m[1]:s};
+const cfg=()=>({folder:folderId(CONFIG.FOLDER||store.get('rv.folder')),key:(CONFIG.API_KEY||store.get('rv.key')).trim()});
+const say=(t,err)=>{const n=$('#note');n.textContent=t;n.classList.toggle('err',!!err)};
+
+async function pdfBuffer(f,key){
+  const r=await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&key=${encodeURIComponent(key)}`);
+  if(!r.ok)throw new Error('No se pudo descargar el PDF ('+r.status+')');return r.arrayBuffer();
+}
+async function renderPage(page,w,q){
+  const v0=page.getViewport({scale:1}),vp=page.getViewport({scale:w/v0.width});
+  const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+  await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;return c;
+}
+
+/* ---------- Kiosco ---------- */
+async function loadShelf(){
+  const {folder,key}=cfg();
+  if(!folder||!key){$('#setup').classList.remove('hidden');say('');return}
+  $('#setup').classList.add('hidden');say('Buscando catálogos…');$('#shelf').innerHTML='';
+  try{
+    let all=[],tok='';
+    do{
+      const q=encodeURIComponent(`'${folder}' in parents and mimeType='application/pdf' and trashed=false`);
+      const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,modifiedTime,thumbnailLink)&orderBy=modifiedTime%20desc&pageSize=100&key=${encodeURIComponent(key)}`+(tok?`&pageToken=${tok}`:''));
+      const j=await r.json();if(!r.ok)throw new Error(j.error&&j.error.message||('Error '+r.status));
+      all=all.concat(j.files||[]);tok=j.nextPageToken||'';
+    }while(tok);
+    files=all;
+    if(!files.length){say('No hay PDFs en la carpeta. Súbelos a Drive y recarga esta página.',true);return}
+    say('');drawShelf();route();
+  }catch(e){say('No se pudo cargar la carpeta: '+e.message,true);$('#setup').classList.remove('hidden')}
+}
+function drawShelf(){
+  const shelf=$('#shelf');shelf.innerHTML='';
+  const limit=Date.now()-CONFIG.NEW_DAYS*864e5;
+  files.forEach(f=>{
+    const b=document.createElement('button');b.className='mag';
+    const d=new Date(f.modifiedTime).toLocaleDateString('es',{day:'numeric',month:'short',year:'numeric'});
+    b.innerHTML='<div class="cov"></div><b></b><small>'+d+'</small>'+(new Date(f.modifiedTime)>limit?'<span class="tag">Nuevo</span>':'');
+    b.querySelector('b').textContent=f.name.replace(/\.pdf$/i,'');
+    const cov=b.querySelector('.cov');
+    if(f.thumbnailLink){const im=new Image();im.alt='';im.src=f.thumbnailLink.replace(/=s\d+$/,'=s600');im.onerror=()=>coverFromPdf(f,cov);cov.appendChild(im)}
+    else coverFromPdf(f,cov);
+    b.onclick=()=>{location.hash='#'+f.id};
+    shelf.appendChild(b);
+  });
+}
+async function coverFromPdf(f,cov){
+  try{await workerReady;const d=await pdfjsLib.getDocument({data:await pdfBuffer(f,cfg().key)}).promise;
+    cov.innerHTML='';cov.appendChild(await renderPage(await d.getPage(1),420))}catch(e){}
+}
+
+/* ---------- Lector ---------- */
+async function openMag(f,startPage){
+  const my=++token;cur=f;closeBook();
+  $('#kiosk').classList.add('hidden');$('#reader').classList.remove('hidden');
+  ['#share','#fs','#back'].forEach(s=>$(s).classList.remove('hidden'));$('#cfg').classList.add('hidden');
+  $('#title').textContent=f.name.replace(/\.pdf$/i,'');
+  $('#load').classList.remove('hidden');$('#book').classList.add('hidden');$('#nav').classList.add('hidden');$('#bar').style.width='0';
+  try{
+    await workerReady;
+    const doc=await pdfjsLib.getDocument({data:await pdfBuffer(f,cfg().key)}).promise;
+    const n=doc.numPages;
+    for(let i=1;i<=n;i++){
+      if(my!==token)return;
+      const c=await renderPage(await doc.getPage(i),900);
+      urls.push(c.toDataURL('image/jpeg',.88));
+      if(i===1)var ratio=c.width/c.height;
+      $('#bar').style.width=(i/n*100)+'%';
+    }
+    if(my!==token)return;
+    $('#load').classList.add('hidden');$('#book').classList.remove('hidden');$('#nav').classList.remove('hidden');
+    const pw=600,ph=Math.round(600/ratio);
+    flip=new St.PageFlip($('#book'),{width:pw,height:ph,size:'stretch',minWidth:200,maxWidth:1400,minHeight:260,maxHeight:1800,showCover:true,usePortrait:true,mobileScrollSupport:false,drawShadow:true,maxShadowOpacity:.5,flippingTime:700});
+    flip.loadFromImages(urls);
+    const rng=$('#rng');rng.max=n;
+    const upd=i=>{rng.value=i+1;$('#pn').textContent=(i+1)+' / '+n;history.replaceState(null,'','#'+f.id+'/'+(i+1))};
+    flip.on('flip',e=>upd(e.data));
+    const sp=Math.min(Math.max(1,startPage||1),n);if(sp>1)flip.turnToPage(sp-1);upd(sp-1);
+  }catch(e){if(my===token)$('#load').innerHTML='<div class="note err">No se pudo abrir esta revista. '+e.message+'</div>'}
+}
+function closeBook(){if(flip){try{flip.destroy()}catch(e){}flip=null}urls=[];$('#book').innerHTML='';$('#load').innerHTML='<div>Preparando la revista…</div><div class="prog"><i id="bar"></i></div>'}
+function showKiosk(){
+  token++;closeBook();cur=null;$('#reader').classList.add('hidden');$('#kiosk').classList.remove('hidden');
+  ['#share','#fs','#back'].forEach(s=>$(s).classList.add('hidden'));$('#cfg').classList.remove('hidden');$('#title').textContent=CONFIG.TITLE;
+}
+function route(){
+  const m=location.hash.match(/^#([\w-]+)(?:\/(\d+))?$/);
+  if(!m){showKiosk();return}
+  const f=files.find(x=>x.id===m[1]);
+  if(f&&(!cur||cur.id!==f.id))openMag(f,+m[2]||1);
+}
+window.addEventListener('hashchange',()=>{if(files.length)route()});
+
+/* ---------- Controles ---------- */
+$('#prev').onclick=()=>flip&&flip.flipPrev();$('#next').onclick=()=>flip&&flip.flipNext();
+$('#rng').oninput=e=>flip&&flip.turnToPage(+e.target.value-1);
+$('#back').onclick=()=>{location.hash=''};
+$('#fs').onclick=()=>{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()};
+$('#share').onclick=()=>{
+  const u=location.origin+location.pathname+'#'+cur.id,t=cur.name.replace(/\.pdf$/i,'');
+  if(navigator.share){navigator.share({title:t,url:u}).catch(()=>{})}
+  else window.open('https://wa.me/?text='+encodeURIComponent(t+' '+u),'_blank');
+};
+$('#cfg').onclick=()=>{$('#folder').value=store.get('rv.folder');$('#key').value=store.get('rv.key');$('#setup').classList.toggle('hidden')};
+$('#save').onclick=()=>{store.set('rv.folder',$('#folder').value.trim());store.set('rv.key',$('#key').value.trim());loadShelf()};
+document.addEventListener('keydown',e=>{if(!flip)return;if(e.key==='ArrowRight')flip.flipNext();if(e.key==='ArrowLeft')flip.flipPrev()});
+loadShelf();
+</script>
+</body>
+</html>
